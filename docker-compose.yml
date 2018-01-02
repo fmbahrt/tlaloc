@@ -1,0 +1,15 @@
+version: '2'
+
+services:
+  search_client:
+    build: ./search_client
+    volumes:
+      - ./routing:/app/routing
+    networks:
+      - tnet
+    ports:
+      - "8080:8080"
+
+networks:
+  tnet:
+    driver: bridge 

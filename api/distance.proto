@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package api;
+
+service Distance {
+	rpc dist(UniqueId) returns(QueryResponse) {}
+}
+
+message UniqueId {
+	string id = 1;
+}
+
+message ResponseElement {
+	string id = 1;
+	float dist = 2;
+}
+
+message QueryResponse {
+	repeated ResponseElement response = 1;	
+}

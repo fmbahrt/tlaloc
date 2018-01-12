@@ -3,11 +3,12 @@ syntax = "proto3";
 package api;
 
 service Distance {
-	rpc dist(UniqueId) returns(QueryResponse) {}
+	rpc dist(Query) returns(Response) {}
 }
 
-message UniqueId {
+message Query {
 	string id = 1;
+	int32 top = 2;
 }
 
 message ResponseElement {
@@ -15,6 +16,6 @@ message ResponseElement {
 	float dist = 2;
 }
 
-message QueryResponse {
-	repeated ResponseElement response = 1;	
+message Response {
+	repeated ResponseElement responses = 1;	
 }

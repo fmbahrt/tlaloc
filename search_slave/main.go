@@ -1,16 +1,15 @@
 package main
 
 import (
-    "flag"
-    "net"
-    "fmt"
     "log"
-
+    "flag"
+    "time"
+    "context"
     //"golang.org/x/net/context" //old context check when grpc is updated
+
     "google.golang.org/grpc"
-    "./escache"
-    rpc "./rpcserver"
-    pb "../api"
+
+    reg "../registry"
 )
 
 
@@ -18,28 +17,36 @@ func main() {
     port := flag.Int("p", 8181, "port to listen to")
     flag.Parse()
 
-    lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+    service, err := NewService(*port)
+    if err != nil {
+        log.Fatalf("Failed to create new service: %v", err)
+    }
+
+    // register in service registry
+    conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
     if err != nil{
-        log.Fatalf("Could not listen to port %d: %v", *port, err)
+        log.Fatalf("Could not connect to service registry")
+        return
     }
+    defer conn.Close()
 
-    log.Println("Creating new gRPC server...")
-    serv := grpc.NewServer()
+    srClient := reg.NewRegistryClient(conn)
+    lease,_ := srClient.Register(context.Background(), &reg.Endpoint{
+        Address: "localhost",
+        Port: int32(*port),
+    })
 
-    log.Println("Creating Elastic Search cache...")
-    escache, err := escache.NewEsCache("http://localhost:9200", "features")
-    if err != nil{
-        log.Fatalf("Could not create EsCache: %v", err)
-    }
+    log.Printf("Got a lease: %v", lease)
 
-    rpcserver := rpc.Server{
-        Es: *escache,
-    }
+    // Sending heartbeats
+    go func(){
+        // FIXME How do I stop this properly?
+        for {
+            log.Printf("Sending heartbeat...")
+            srClient.CheckIn(context.Background(), lease)
+            <-time.After(time.Duration(lease.CheckInInterval) * time.Second)
+        }
+    }()
 
-    pb.RegisterDistanceServer(serv, rpcserver)
-    log.Println("Ready...")
-    err = serv.Serve(lis)
-    if err != nil{
-        log.Fatalf("Could not serve: %v", err)
-    }
+    service.Deploy()
 }

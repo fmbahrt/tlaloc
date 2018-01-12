@@ -2,12 +2,14 @@ package handlers
 
 import (
     "fmt"
+//	"strconv"
     "net/http"
     "context"
-    "encoding/json"
+//    "encoding/json"
 
     "google.golang.org/grpc"
-    pb "../../api"
+//    pb "../../api"
+    reg "../../registry"
 )
 
 // Move this
@@ -24,8 +26,32 @@ func Search(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    backend := "localhost:8181"
+    top := r.URL.Query().Get("top")
+    if top == "" {
+        http.Error(w, "Expecting top in query", http.StatusBadRequest)
+        return
+    }
 
+	//n, err := strconv.Atoi(top)
+	//if err != nil {
+    //    http.Error(w, err.Error(), http.StatusBadRequest)
+    //    return
+	//}
+
+    //backend := "localhost:8181"
+
+    conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
+    if err != nil{
+        http.Error(w, "Could not connect to service registry", http.StatusInternalServerError)
+        return
+    }
+    defer conn.Close()
+
+    srClient := reg.NewRegistryClient(conn)
+    services,_ := srClient.GetAllServices(context.Background(), &reg.EmptyParam{})
+
+    fmt.Fprint(w, fmt.Sprint("%v", services.Services))
+    /*
     conn, err := grpc.Dial(backend, grpc.WithInsecure())
     if err != nil{
         http.Error(w, "Could not connect to search backend.", http.StatusInternalServerError)
@@ -35,8 +61,8 @@ func Search(w http.ResponseWriter, r *http.Request) {
 
     client := pb.NewDistanceClient(conn)
 
-    queryId := &pb.UniqueId{Id: id}
-    res, err := client.Dist(context.Background(), queryId)
+    query := &pb.Query{Id: id, Top: int32(n)}
+    res, err := client.Dist(context.Background(), query)
 
     if err != nil{
         http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -50,5 +76,5 @@ func Search(w http.ResponseWriter, r *http.Request) {
     }
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonned)
+	w.Write(jsonned)*/
 }

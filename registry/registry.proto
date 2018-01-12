@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package registry;
+
+service Registry {
+	rpc Register(Endpoint) returns(Lease) {}
+	rpc Unregister(Lease) returns(Confirmation) {}
+	rpc GetAllServices(EmptyParam) returns(Services) {}
+	rpc CheckIn(Lease) returns(Confirmation) {}
+}
+
+message Confirmation {
+	bool ok = 1;
+}
+
+message Lease {
+	string id = 1;
+	uint32 CheckInInterval = 2;	
+}
+
+message Service {
+	string id = 1;
+	Endpoint endpoint = 2;
+}
+
+message Services {
+	repeated Service services = 1;
+}
+
+message Endpoint {
+	string address = 1;
+	int32 port = 2;
+}
+
+message EmptyParam {}
